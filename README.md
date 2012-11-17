@@ -11,11 +11,11 @@ This is the second attempt to the app, after a failed attempt in PhoneGap, which
 The app is not in a functional state yet, but very close to it.
 
 ##TODO
-    * upload contents in a post request to the server.
-        * handle errors and inform the user.
-        * daemon/setTimeout to try to send periodically.
-    * Messaging system to show and delete temporary messages.
-    * probably more.
+* upload contents in a post request to the server.
+    * handle errors and inform the user.
+    * daemon/setTimeout to try to send periodically.
+* Messaging system to show and delete temporary messages.
+* probably more.
 
 
 ##Acknowledgements 
