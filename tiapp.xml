@@ -13,7 +13,7 @@
         <target device="android">false</target>
         <target device="blackberry">false</target>
     </deployment-targets>
-    <sdk-version>2.1.3.GA</sdk-version>
+    <sdk-version>2.1.4.GA</sdk-version>
     <id>org.bkme.iphone.app</id>
     <name>BKME iPhone App</name>
     <version>0.1</version>

@@ -1,11 +1,12 @@
 //os flags
-	if(Ti.Platform.osname=='android') {
-	   BKME.isAndroid = true;
-	   BKME.isIos = false;
-	} else {
-		BKME.isIos = true;
-		BKME.isAndroid = false;
-	} 
+BKME.is = {};
+if(Ti.Platform.osname=='android') {
+   BKME.is.android = true;
+   BKME.is.ios = false;
+} else {
+	BKME.is.ios = true;
+	BKME.is.android = false;
+} 
 	
 //General Style Variables
 	BKME.bgColor = '#ededf5';
@@ -17,7 +18,7 @@
 
 //custom font
 // on Android, use the "base name" of the file (name without extension)	
-if (BKME.android) BKME.mainFont = 'ITCAvantCardeStd';
+if (BKME.is.android) BKME.mainFont = 'ITCAvantCardeStd';
 
 //general background.
 Titanium.UI.setBackgroundColor(BKME.bgColor);
@@ -29,7 +30,8 @@ Titanium.UI.setBackgroundColor(BKME.bgColor);
 
 	
 //GEOLOCATION
-function translateErrorCode(code) {
+BKME.geo = BKME.geo || {};
+BKME.geo.translateErrorCode = function(code) {
 	if (code == null) {
 		return null;
 	}
@@ -53,76 +55,89 @@ function translateErrorCode(code) {
 
 
 
-BKME.lastGeo = (BKME.hasOwnProperty('lastGeo')) ? BKME.lastGeo : {};	
+BKME.geo.last =  BKME.geo.last || {};	
 
-BKME.getGeo = function(){
+BKME.geo.get = function(){
 	var howOld = 30;	
 	//titanium preferences for iPhone
 	Titanium.Geolocation.setAccuracy(Titanium.Geolocation.ACCURACY_BEST);
 	Titanium.Geolocation.setDistanceFilter(10);
-	Ti.Geolocation.purpose = "Link the report to your location.";
+	Ti.Geolocation.purpose = "Link the report to your current location.";
 
 	// if timestamp is not defined, set it at 2010
-	if ( ! BKME.lastGeo.hasOwnProperty("timestamp") ) BKME.lastGeo.timestamp = new Date().setFullYear(2010);
+	BKME.geo.last.timestamp = BKME.geo.last.timestamp || new Date().setFullYear(2010);
 	
-	Ti.API.info( "last:"+ BKME.lastGeo.timestamp +", current:"+ Date());
-	var diff = Math.abs(new Date() - BKME.lastGeo.timestamp);
+	Ti.API.info( "last:"+ BKME.geo.last.timestamp +", current:"+ Date());
+	var diff = Math.abs(new Date() - BKME.geo.last.timestamp);
 	Ti.API.info( "diff is: " + diff );
 	
 	if( diff > howOld*1000 ) {
 		Ti.API.info("geo is too old, getting new geo");
 
-		Titanium.Geolocation.getCurrentPosition(function(e) {
-		    if (e.error) {
-		    	Ti.API.info("ERROR: "+translateErrorCode(e.code));
-        		alert('Can\'t get your current location, please enable');
-	        return;
+	    Titanium.Geolocation.getCurrentPosition(function(e) {});
+						
+		var locationCallback = function(e) {
+	        if (!e.success || e.error) {
+	        	Ti.API.info("ERROR: "+BKME.geo.translateErrorCode(e.code));
+	        	return;
     		}
-		    BKME.lastGeo.timestamp = e.coords.timestamp;
-    		BKME.lastGeo.lon = e.coords.longitude;
-		    BKME.lastGeo.lat = e.coords.latitude;
-		    BKME.lastGeo.alt = e.coords.altitude;
-		    BKME.lastGeo.heading = e.coords.heading;
-		    BKME.lastGeo.accuracy = e.coords.accuracy;
-		    BKME.lastGeo.speed = e.coords.speed;
-		});
+    		var last = {
+    			timestamp : e.coords.timestamp,
+	    		lon : e.coords.longitude,
+			    lat : e.coords.latitude,
+			    alt : e.coords.altitude,
+			    heading : e.coords.heading,
+			    accuracy : e.coords.accuracy,
+			    speed : e.coords.speed	
+    		}
+    		BKME.geo.last = last;
+			Ti.API.info("current location is: " + BKME.geo.last.lat + ', ' + BKME.geo.last.lon);
+			return BKME.geo.last;
+    	};
+    	Titanium.Geolocation.addEventListener('location', locationCallback);
 	}
-	Ti.API.info("current location is: " + BKME.lastGeo.lat + ', ' + BKME.lastGeo.lon)
-	return BKME.lastGeo;
+
 }
 
 // END GEOLOCATION
 
 
 // DATABASE
-
-BKME.dbOpen = function(){	
-	var db = db || Titanium.Database.open('bkmedb');
+BKME.db = {};
+BKME.db.open = function(){	
+	BKME.db.db = BKME.db.db || Titanium.Database.open('bkmedb');
 	db.execute('CREATE TABLE IF NOT EXISTS reports ( data TEXT, deliveryStatus INTEGER )');
-	return db;
+
+	if (BKME.db.closeTimer) clearTimeout(BKME.db.closeTimer);
+	BKME.db.closeTimer = setTimeout(function(){
+		BKME.db.db.close();
+		BKME.db.db = false;
+	},60*1000);
+	return BKME.db.db;
 }
 
-BKME.dbAdd = function(report){
+BKME.db.add = function(report){
 	var reportString = JSON.stringify(report),
-		db = BKME.dbOpen();
+		db = BKME.db.open();
 		
-	db.execute('INSERT INTO reports (data, deliveryStatus ) VALUES(?,?)',reportString,0);
-	
+	db.execute('INSERT INTO reports (data, deliveryStatus ) VALUES(?,?)',reportString,0);	
 	Titanium.API.info('JUST INSERTED, rowsAffected = ' + db.rowsAffected, ' lastInsertRowId = ' + db.lastInsertRowId);
 	
-	db.close();
 }
 
-BKME.dbGetNotSent = function() {
+BKME.db.getNotSent = function() {
 	var rows, db,
 		reports = [],
 		thisReport = {},
 		status = 0; // not sent
 			
-	db = BKME.dbOpen(),
+	db = BKME.db.open(),
 	rows = db.execute('SELECT * FROM reports WHERE deliveryStatus ?', status);
-	db.close();
-  	if ( rows.getRowCount() === 0 ) return 0;
+  	if ( rows.getRowCount() == 0 ) {
+  		db.close();
+  		clearTimeout(BKME.db.closeTimer);
+		return 0;
+	}
   	
   	while (rows.isValidRow()){
 		thisReport = {
@@ -138,14 +153,14 @@ BKME.dbGetNotSent = function() {
 	return reports;
 }
 
-BKME.dbMarkAsSent = function(rowId){
-	var db = BKME.dbOpen();
+BKME.db.markAsSent = function(rowId){
+	var db = BKME.db.open();
 	db.execute('UPDATE reports SET deliveryStatus = ? WHERE ROWID = ?', 1, rowId);
 }
 
 
-BKME.dbCleanup = function(){
-	var db = BKME.dbOpen();
+BKME.db.cleanup = function(){
+	var db = BKME.db.open();
 	db.execute('DELETE FROM reports WHERE deliveryStatus = ?', 1);
 }
 
@@ -153,11 +168,12 @@ BKME.dbCleanup = function(){
 
 
 BKME.sendReports = function(){
-	var reports = BKME.dbGetNotSent();
+	var reports = BKME.db.etNotSent();
+		Ti.API.info("Checking unsent reports...");
 	
 	// if there are no reports, exit	
 	if (reports == 0 ) {
-		Ti.API.info("Checked unsent reports. nothing to send.");
+		Ti.API.info("No reports left to be sent.");
 		return;
 	}
 	var thisReport,

@@ -15,6 +15,7 @@ The app is not in a functional state yet, but very close to it.
     * handle errors and inform the user.
     * daemon/setTimeout to try to send periodically.
 * Messaging system to show and delete temporary messages.
+* improve the ui and overall look of the app
 * probably more.
 
 

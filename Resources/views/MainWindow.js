@@ -93,8 +93,6 @@ function MainWindow(){
 
 	});
 	
-	
-	
 	self.add(helloLabel);
 	self.add(mainImage);
 	self.add(reportLabel);

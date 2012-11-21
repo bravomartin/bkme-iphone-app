@@ -19,10 +19,10 @@ BKME.props = Ti.App.Properties;
 //
 // create base UI tab and root window
 //
-//get geo and set a listener for getting geo every time it opens.
-BKME.getGeo();
+//get geo and set a listener for getting geo every time it resumes.
+BKME.geo.get();
 Ti.App.addEventListener('resume',function(e) {
-	BKME.getGeo();
+	BKME.geo.get();
 });
 Ti.App.addEventListener('close',function(e) {
 	// here it should be added the background process for uploading the reports
